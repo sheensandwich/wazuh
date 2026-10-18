@@ -1,0 +1,166 @@
+<group name="mikrotik_group,">
+
+  <!-- Temporary Broad Catch-All Rule for Testing -->
+  <!-- This hooks onto the native syslog engine to trap your MikroTik's IP safely -->
+  <rule id="110099" level="3">
+    <category>syslog</category>
+    <match>10.0.0.1</match>
+    <description>Raw MikroTik Syslog Stream (IP Match)</description>
+  </rule>
+
+  <!-- Base Custom Decoder Rule -->
+  <rule id="110000" level="0">
+    <decoded_as>mikrotik</decoded_as>
+    <description>MikroTik events grouped.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 1. Authentication & Session Monitoring (Critical)       -->
+  <!-- ======================================================== -->
+
+  <rule id="110002" level="15">
+    <if_sid>110000</if_sid>
+    <match>logged in</match>
+    <description>MikroTik: CRITICAL ALERT - User successfully logged into the device.</description>
+  </rule>
+
+  <rule id="110003" level="15">
+    <if_sid>110000</if_sid>
+    <match>login failure</match>
+    <description>MikroTik: CRITICAL ALERT - Authentication failed (Potential Brute Force).</description>
+  </rule>
+
+  <rule id="110006" level="12">
+    <if_sid>110000</if_sid>
+    <match>logged out from</match>
+    <description>MikroTik: User logged out from the device.</description>
+  </rule>
+
+  <rule id="110007" level="15">
+    <if_sid>110000</if_sid>
+    <match>logged in from</match>
+    <description>MikroTik: CRITICAL ALERT - User logged in from remote session.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 2. Perimeter Security & Firewall Events                  -->
+  <!-- ======================================================== -->
+
+  <rule id="110010" level="12">
+    <if_sid>110000</if_sid>
+    <match>, firewall, info </match>
+    <description>MikroTik: Firewall informational log event triggered.</description>
+  </rule>
+
+  <rule id="110011" level="15">
+    <if_sid>110000</if_sid>
+    <match>forward: drop</match>
+    <description>MikroTik: CRITICAL ALERT - External traffic dropped by forward firewall chain.</description>
+  </rule>
+
+  <rule id="110012" level="15">
+    <if_sid>110000</if_sid>
+    <match>input: drop</match>
+    <description>MikroTik: CRITICAL ALERT - Traffic dropped on router interface input chain.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 3. Network Scans & Vulnerability Scanners (CRITICAL)     -->
+  <!-- ======================================================== -->
+
+  <!-- External WAN Port Scan Detection -->
+  <rule id="110050" level="15">
+    <if_sid>110000</if_sid>
+    <match>port_scanners</match>
+    <description>MikroTik: CRITICAL ALERT - External Port Scan detected on WAN interface! Attacker IP blacklisted.</description>
+  </rule>
+
+  <!-- Internal LAN Port Scan Detection (Log Only) -->
+  <rule id="110053" level="15">
+    <if_sid>110000</if_sid>
+    <match>internal_portscan</match>
+    <description>MikroTik: CRITICAL ALERT - Internal Port Scan detected on LAN interface! Local host reconnaissance activity.</description>
+  </rule>
+
+  <!-- Vulnerability Exploit Scanner Detection -->
+  <rule id="110060" level="15">
+    <if_sid>110000</if_sid>
+    <match>vuln_scan_attempt</match>
+    <description>MikroTik: CRITICAL ALERT - Aggressive Vulnerability Exploit Scan Blocked on Forward Chain!</description>
+  </rule>
+
+  <!-- Wazuh SIEM Level Correlation: Multiple firewall drops from same source IP -->
+  <rule id="110051" level="15" frequency="5" timeframe="30">
+    <if_matched_sid>110012</if_matched_sid>
+    <same_source_ip />
+    <description>MikroTik: CRITICAL ALERT - SIEM Correlation: Vertical network port scan detected (5+ drops in 30s).</description>
+  </rule>
+
+  <!-- Detect traffic targeting legacy or insecure ports -->
+  <rule id="110052" level="15">
+    <if_sid>110012</if_sid>
+    <match>dst-port=21|dst-port=23|dst-port=80|dst-port=445</match>
+    <description>MikroTik: CRITICAL ALERT - Inbound traffic attempt detected on unencrypted/legacy management port.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 4. Core System & Configuration Alterations               -->
+  <!-- ======================================================== -->
+
+  <rule id="110005" level="15">
+    <if_sid>110000</if_sid>
+    <match>rebooted</match>
+    <description>MikroTik: CRITICAL ALERT - Router rebooted.</description>
+  </rule>
+
+  <rule id="110020" level="15">
+    <if_sid>110000</if_sid>
+    <match>system,info,account system configuration changed</match>
+    <description>MikroTik: CRITICAL ALERT - Administrative settings changed on device configuration.</description>
+  </rule>
+
+  <rule id="110021" level="15">
+    <if_sid>110000</if_sid>
+    <match>changed password for user</match>
+    <description>MikroTik: CRITICAL ALERT - Local user account password modified.</description>
+  </rule>
+
+  <rule id="110022" level="12">
+    <if_sid>110000</if_sid>
+    <match>link down</match>
+    <description>MikroTik: Network Interface physical interface link down.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 5. Tunnels & Remote Access VPN Monitoring                -->
+  <!-- ======================================================== -->
+
+  <rule id="110030" level="15">
+    <if_sid>110000</if_sid>
+    <match>vpn,info peer connected</match>
+    <description>MikroTik: CRITICAL ALERT - Remote VPN/Wireguard peer tunnel session established.</description>
+  </rule>
+  
+  <rule id="110031" level="15">
+    <if_sid>110000</if_sid>
+    <match>vpn,info,error termination</match>
+    <description>MikroTik: CRITICAL ALERT - VPN session disconnected or aborted due to error state.</description>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 6. Internal Network Infrastructure & Services           -->
+  <!-- ======================================================== -->
+
+  <rule id="110004" level="12">
+    <if_sid>110000</if_sid>
+    <match>dhcp-client on ether</match>
+    <description>MikroTik: DHCP client received an IP address assignment.</description>
+  </rule>
+
+  <rule id="110040" level="12">
+    <if_sid>110000</if_sid>
+    <match>dhcp,info assigned</match>
+    <description>MikroTik: Local DHCP Server assigned or renewed network lease.</description>
+  </rule>
+
+</group>
