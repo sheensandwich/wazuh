@@ -1,0 +1,247 @@
+<!-- /var/ossec/etc/rules/linux_detects_rules.xml -->
+<!-- Linux detections modeled on the CMD saved searches. Rule IDs 100200 to 100231. -->
+<!-- Command rules need auditd execve logging (see audit-wazuh-linux.rules) and use the Wazuh audit command rule 80792 as parent. -->
+<!-- Confirm that ID exists on your manager: grep -rn 'id="80792"' /var/ossec/ruleset/rules/ -->
+<!-- Where two rules can match the same event, the more specific one is listed first. Confirm which fires with wazuh-logtest. -->
+
+<group name="linux_detects,">
+
+  <!-- ======================================================== -->
+  <!-- 1. Identity and privilege file tampering (FIM) -->
+  <!-- ======================================================== -->
+
+  <!-- Parents 550, 553, 554 are syscheck modified, deleted, added. /etc must be in your syscheck directories. -->
+  <rule id="100200" level="12">
+    <if_sid>550, 553, 554</if_sid>
+    <field name="file" type="pcre2">^/etc/(?:shadow|gshadow|passwd|group|sudoers(?:\.d/.*)?)$</field>
+    <description>Linux: Identity or privilege file changed ($(file)).</description>
+    <group>identity_tampering,syscheck,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 2. Log manipulation and anti-forensics -->
+  <!-- ======================================================== -->
+
+  <rule id="100201" level="12">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:rm|shred|truncate|unlink)$</field>
+    <match type="pcre2">/var/log|\.bash_history</match>
+    <description>Linux: Log or shell history file removed or wiped via $(audit.command).</description>
+    <group>log_tampering,audit_command,</group>
+  </rule>
+
+  <rule id="100202" level="12">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^auditctl$</field>
+    <match type="pcre2">a\d+="-e"\s+a\d+="0"|a\d+="-D"</match>
+    <description>Linux: auditd rules disabled or deleted with auditctl.</description>
+    <group>log_tampering,audit_command,</group>
+  </rule>
+
+  <rule id="100203" level="12">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^systemctl$</field>
+    <match type="pcre2">a\d+="(?:stop|disable|mask|kill)"\s+a\d+="(?:auditd|rsyslog|syslog|syslog-ng|systemd-journald|wazuh-agent)(?:\.service)?"</match>
+    <description>Linux: Logging or security agent service stopped or disabled.</description>
+    <group>log_tampering,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 3. Cron -->
+  <!-- ======================================================== -->
+
+  <rule id="100204" level="4">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^crontab$</field>
+    <field name="audit.execve.a1" type="pcre2">^-l$</field>
+    <description>Linux: Crontab listed.</description>
+    <group>cron,audit_command,</group>
+  </rule>
+
+  <rule id="100205" level="8">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^crontab$</field>
+    <field name="audit.execve.a1" type="pcre2" negate="yes">^-l$</field>
+    <description>Linux: Crontab edited, replaced or removed.</description>
+    <group>cron,persistence,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 4. Recon, permissions and file operations -->
+  <!-- ======================================================== -->
+
+  <!-- printenv always, env only when run with no arguments (env is also the shebang launcher for scripts) -->
+  <rule id="100206" level="3">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:env|printenv)$</field>
+    <match type="pcre2">a0="[^"]*printenv"|argc=1\s+a0="[^"]*env"</match>
+    <description>Linux: Environment variables listed.</description>
+    <group>recon,audit_command,</group>
+  </rule>
+
+  <rule id="100207" level="6">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^chmod$</field>
+    <match type="pcre2">a\d+="(?:[ugoa]*[+=][rwXst]*x[rwXst]*|0?[0-7]?(?:[1357][0-7]{2}|[0-7][1357][0-7]|[0-7]{2}[1357]))"</match>
+    <description>Linux: chmod granting execute permission.</description>
+    <group>file_permissions,audit_command,</group>
+  </rule>
+
+  <rule id="100208" level="4">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:chown|chgrp)$</field>
+    <description>Linux: File ownership changed with $(audit.command).</description>
+    <group>file_permissions,audit_command,</group>
+  </rule>
+
+  <rule id="100209" level="7">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^rm$</field>
+    <match type="pcre2">a\d+="(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)"</match>
+    <description>Linux: Recursive rm executed.</description>
+    <group>file_deletion,audit_command,</group>
+  </rule>
+
+  <rule id="100222" level="6">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^find$</field>
+    <match type="pcre2">a\d+="-(?:writable|perm)"</match>
+    <description>Linux: find used to hunt writable files or permission bits.</description>
+    <group>recon,privilege_escalation,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 5. Transfer and tunneling -->
+  <!-- ======================================================== -->
+
+  <rule id="100210" level="5">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:wget|curl)$</field>
+    <description>Linux: $(audit.command) executed.</description>
+    <group>file_transfer,audit_command,</group>
+  </rule>
+
+  <rule id="100211" level="5">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:scp|rsync)$</field>
+    <description>Linux: $(audit.command) executed.</description>
+    <group>file_transfer,audit_command,</group>
+  </rule>
+
+  <!-- Matches -L, -R, -D including combined flags such as -fNL -->
+  <rule id="100212" level="8">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^ssh$</field>
+    <match type="pcre2">a\d+="-[46AaCfGgKkMNnqsTtVvXxYy]*[LRD]</match>
+    <description>Linux: SSH port forwarding or SOCKS tunnel requested.</description>
+    <group>ssh_tunnel,lateral_movement,audit_command,</group>
+  </rule>
+
+  <rule id="100213" level="5">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^ssh-keygen$</field>
+    <description>Linux: ssh-keygen executed.</description>
+    <group>ssh_keys,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 6. Users, groups and shells -->
+  <!-- ======================================================== -->
+
+  <!-- Specific rules first: sudo group membership, then shell change, then generic account changes -->
+  <rule id="100214" level="10">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:usermod|gpasswd|adduser|addgroup|useradd)$</field>
+    <match type="pcre2">a\d+="(?:[^"]*,)?(?:sudo|wheel|admin)(?:,[^"]*)?"</match>
+    <description>Linux: User added to a privileged group (sudo, wheel or admin).</description>
+    <group>privilege_escalation,account_changes,audit_command,</group>
+  </rule>
+
+  <rule id="100215" level="7">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:chsh|usermod)$</field>
+    <match type="pcre2">a0="[^"]*chsh"|a\d+="(?:-s|--shell)"</match>
+    <description>Linux: User login shell changed.</description>
+    <group>account_changes,audit_command,</group>
+  </rule>
+
+  <rule id="100216" level="6">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:useradd|usermod|userdel|groupadd|groupmod|groupdel|adduser|addgroup|deluser|delgroup|gpasswd|chage|passwd|vipw|vigr)$</field>
+    <description>Linux: User or group modification via $(audit.command).</description>
+    <group>account_changes,audit_command,</group>
+  </rule>
+
+  <rule id="100220" level="5">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^sudo$</field>
+    <match type="pcre2">a\d+="(?:-l+|--list)"</match>
+    <description>Linux: sudo privileges listed (sudo -l).</description>
+    <group>recon,privilege_escalation,audit_command,</group>
+  </rule>
+
+  <rule id="100221" level="4">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:getent|cat|less|more|head|tail|grep|awk|sed|cut)$</field>
+    <match type="pcre2">a\d+="(?:passwd|group|shadow)"|/etc/(?:passwd|group|shadow|sudoers)</match>
+    <description>Linux: User, group or sudoers data enumerated with $(audit.command).</description>
+    <group>recon,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 7. Packages and firewall -->
+  <!-- ======================================================== -->
+
+  <rule id="100217" level="3">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:apt|apt-get|aptitude|dpkg|yum|dnf|rpm|snap|zypper|pacman|apk)$</field>
+    <match type="pcre2">a\d+="(?:install|reinstall|remove|purge|autoremove|upgrade|dist-upgrade|full-upgrade|erase|-i|-r|-P|-U|-e|-ivh|-Uvh)"</match>
+    <description>Linux: Package change via $(audit.command).</description>
+    <group>package_changes,audit_command,</group>
+  </rule>
+
+  <!-- Prefix match on the command name because comm is truncated to 15 characters. Read-only listings are excluded. -->
+  <rule id="100218" level="7">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:ip6?tables|nft|ufw|firewall-cmd|ipset)</field>
+    <field name="audit.execve.a1" type="pcre2" negate="yes">^(?:-[LSnvx]+|--list|--list-rules|--list-all|list|status|show|--state)$</field>
+    <description>Linux: Firewall configuration changed via $(audit.command).</description>
+    <group>firewall_changes,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 8. Shell breakout through allowed binaries (GTFOBins style) -->
+  <!-- ======================================================== -->
+
+  <rule id="100219" level="12">
+    <if_sid>80792</if_sid>
+    <field name="audit.command" type="pcre2">^(?:awk|gawk|mawk|find|vi|vim|view|less|more|man|nmap|tar|env|perl|python[0-9.]*|ruby|lua|php|node|zip|gdb|ed|expect|socat|nice|timeout|xargs|git|ftp|rsync|strace)$</field>
+    <match type="pcre2">a\d+="[^"]*(?:/(?:usr/)?bin/(?:ba|da|z|k|c)?sh|pty\.spawn|os\.system|system\()</match>
+    <description>Linux: Possible shell breakout through $(audit.command).</description>
+    <group>privilege_escalation,shell_breakout,audit_command,</group>
+  </rule>
+
+  <!-- ======================================================== -->
+  <!-- 9. SSH logins (parent 5715 is sshd authentication success) -->
+  <!-- ======================================================== -->
+
+  <rule id="100230" level="10">
+    <if_sid>5715</if_sid>
+    <user>^root$</user>
+    <description>Linux: Successful SSH login as root from $(srcip).</description>
+    <group>root_login,authentication_success,</group>
+  </rule>
+
+  <!-- DISABLED until you create the list. Steps:
+       1. Create /var/ossec/etc/lists/trusted-ssh-sources with one entry per line, for example   10.0.0.0/8:
+       2. Add <list>etc/lists/trusted-ssh-sources</list> inside <ruleset> in ossec.conf
+       3. Move this rule out of the comment and restart the manager.
+  <rule id="100231" level="9">
+    <if_sid>5715</if_sid>
+    <list field="srcip" lookup="not_address_match_key">etc/lists/trusted-ssh-sources</list>
+    <description>Linux: Successful SSH login from outside trusted sources ($(srcip)).</description>
+    <group>unexpected_login,authentication_success,</group>
+  </rule>
+  -->
+
+</group>
