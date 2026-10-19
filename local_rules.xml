@@ -186,7 +186,7 @@
     <group>osx,macos,persistence,fim,t1543.001,</group>
   </rule>
 <!-- RULE FOR NEW CONN -->
-  <rule id="100010" level="3">
+  <rule id="100011" level="3">
   <decoded_as>mikrotik-firewall</decoded_as>
   <description>MikroTik Outgoing Network Connection Detected</description>
 </rule>
