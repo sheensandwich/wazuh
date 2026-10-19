@@ -185,4 +185,10 @@
     <description>macOS: CRITICAL ALERT - Persistence Attempt: New background LaunchAgent or LaunchDaemon added/modified.</description>
     <group>osx,macos,persistence,fim,t1543.001,</group>
   </rule>
+<!-- RULE FOR NEW CONN -->
+  <rule id="100010" level="3">
+  <decoded_as>mikrotik-firewall</decoded_as>
+  <description>MikroTik Outgoing Network Connection Detected</description>
+</rule>
+  
 </group>
