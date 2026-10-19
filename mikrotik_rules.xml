@@ -1,3 +1,4 @@
+<!-- /var/ossec/etc/rules/mikrotik_rules.xml -->
 <group name="mikrotik_group,">
 
   <!-- Temporary Broad Catch-All Rule for Testing -->
