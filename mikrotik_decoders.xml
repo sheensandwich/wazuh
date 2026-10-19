@@ -10,7 +10,7 @@
   <order>srcuser, srcip, protocol</order>
 </decoder>
 
-<! -- OUT_CON FIELDS -->
+<!-- OUT_CON FIELDS -->
 <decoder name="mikrotik-firewall">
   <prematch>OUT_CONN</prematch>
 </decoder>
