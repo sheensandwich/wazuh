@@ -1,5 +1,5 @@
 <!-- Local rules -->
-<!-- /var/ossec/etc/rules/mikrotik_rules.xml -->
+<!-- /var/ossec/etc/rules/local_rules.xml -->
 <!-- Modify it at your will. -->
 <!-- Copyright (C) 2015, Wazuh Inc. -->
 
@@ -191,48 +191,4 @@
   <description>MikroTik Outgoing Network Connection Detected</description>
 </rule>
 
-<!-- ======================================================== -->
-<!-- MikroTik Network & Administrative Monitoring             -->
-<!-- ======================================================== -->
-
-<!-- Corrected Network Log Rule (Changed from 100010 to 100200) -->
-<rule id="100200" level="3">
-  <decoded_as>mikrotik-firewall</decoded_as>
-  <description>MikroTik Outgoing Network Connection Detected</description>
-</rule>
-
-<!-- Base Rule for Catching Web FIG / WinBox Logins -->
-<rule id="100201" level="3">
-  <decoded_as>mikrotik-auth</decoded_as>
-  <description>MikroTik administrative authentication log entry</description>
-</rule>
-
-<!-- Successful Admin Logins -->
-<rule id="100202" level="5">
-  <if_sid>100201</if_sid>
-  <match>logged in</match>
-  <description>MikroTik: Admin User $(dstuser) Logged In via $(system_name)</description>
-</rule>
-
-<!-- Failed Admin Logins -->
-<rule id="100203" level="5">
-  <if_sid>100201</if_sid>
-  <match>failed</match>
-  <description>MikroTik: Authentication Failure for User $(dstuser) via $(system_name)</description>
-</rule>
-
-<!-- Auto-Flag Brute Force Attacks (5 bad attempts within 3 mins from same IP) -->
-<rule id="100204" level="10">
-  <if_sid>100203</if_sid>
-  <frequency>5</frequency>
-  <timeframe>180</timeframe>
-  <same_source_ip />
-  <description>MikroTik: Brute-Force Authentication Attempt from $(srcip)</description>
-  <mitre>
-    <id>T1110</id>
-  </mitre>
-</rule>
-
-
-  
 </group>
