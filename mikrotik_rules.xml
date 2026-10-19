@@ -1,5 +1,5 @@
 <!-- /var/ossec/etc/rules/mikrotik_rules.xml -->
-<group name="mikrotik_group,">
+<group name="mikrotik_group">
 
   <!-- Temporary Broad Catch-All Rule for Testing -->
   <!-- This hooks onto the native syslog engine to trap your MikroTik's IP safely -->
