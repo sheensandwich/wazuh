@@ -1,0 +1,10 @@
+<group name="local_tuning,">
+
+  <!-- Mute MikroTik Internal Port Scan alerts for authorized host 10.0.0.20 -->
+  <rule id="110054" level="0">
+    <if_sid>110053</if_sid>
+    <match>10.0.0.20</match>
+    <description>Tuning: Ignore MikroTik port scan alerts originating from authorized internal host 10.0.0.20</description>
+  </rule>
+
+</group>
