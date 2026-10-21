@@ -76,6 +76,12 @@
     <description>MikroTik: CRITICAL ALERT - Traffic dropped on router interface input chain.</description>
   </rule>
 
+  <!-- RULE FOR OUT_CONN SET TO MEDIUM -->
+  <rule id="100100" level="5">
+    <decoded_as>mikrotik-firewall</decoded_as>
+    <description>MikroTik firewall connection detected: OUT_CONN</description>
+  </rule>
+
   <!-- ======================================================== -->
   <!-- 3. Network Scans & Vulnerability Scanners (CRITICAL)     -->
   <!-- ======================================================== -->
