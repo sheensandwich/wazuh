@@ -77,7 +77,7 @@
   </rule>
 
   <!-- RULE FOR OUT_CONN SET TO MEDIUM -->
-  <rule id="110013" level="5">
+  <rule id="110013" level="8">
     <decoded_as>mikrotik-firewall</decoded_as>
     <description>MikroTik firewall connection detected: OUT_CONN</description>
   </rule>
