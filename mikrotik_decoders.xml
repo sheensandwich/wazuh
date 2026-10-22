@@ -19,6 +19,20 @@
   <order>srcip, srcport, dstip, dstport</order>
 </decoder>
 
+<!-- EXTRACTOR 2B: Secondary Parse for TCP layouts with connection flags like (SYN) -->
+<decoder name="mikrotik-firewall-fields">
+  <parent>mikrotik-firewall</parent>
+  <regex>\p, (\d+.\d+.\d+.\d+):(\d+)->(\d+.\d+.\d+.\d+):(\d+)</regex>
+  <order>srcip, srcport, dstip, dstport</order>
+</decoder>
+
+<!-- EXTRACTOR 2C: Explicitly handles TCP logs with parenthetical flags AND trailing fields like prio -->
+<decoder name="mikrotik-firewall-fields">
+  <parent>mikrotik-firewall</parent>
+  <regex>proto TCP \p, (\d+.\d+.\d+.\d+):(\d+)->(\d+.\d+.\d+.\d+):(\d+), prio</regex>
+  <order>srcip, srcport, dstip, dstport</order>
+</decoder>
+
 <!-- EXTRACTOR 3: Fallback to extract raw IPs when ports are missing (ICMP) -->
 <decoder name="mikrotik-firewall-fields">
   <parent>mikrotik-firewall</parent>
