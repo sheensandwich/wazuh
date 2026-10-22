@@ -1,5 +1,36 @@
 <!-- /var/ossec/etc/decoders/mikrotik_decoders.xml -->
-<!-- Base MikroTik Decoder -->
+
+<!-- Independent Firewall Root -->
+<decoder name="mikrotik-firewall">
+  <prematch>OUT_CONN</prematch>
+</decoder>
+
+<!-- EXTRACTOR 1: Extracts the protocol (TCP, UDP, ICMP) -->
+<decoder name="mikrotik-firewall-fields">
+  <parent>mikrotik-firewall</parent>
+  <regex>proto (\w+)</regex>
+  <order>protocol</order>
+</decoder>
+
+<!-- EXTRACTOR 2: Extracts Ports and IPs when ports are present (TCP/UDP/NAT) -->
+<decoder name="mikrotik-firewall-fields">
+  <parent>mikrotik-firewall</parent>
+  <regex>(\d+.\d+.\d+.\d+):(\d+)->(\d+.\d+.\d+.\d+):(\d+)</regex>
+  <order>srcip, srcport, dstip, dstport</order>
+</decoder>
+
+<!-- EXTRACTOR 3: Fallback to extract raw IPs when ports are missing (ICMP) -->
+<decoder name="mikrotik-firewall-fields">
+  <parent>mikrotik-firewall</parent>
+  <regex>(\d+.\d+.\d+.\d+)->(\d+.\d+.\d+.\d+)</regex>
+  <order>srcip, dstip</order>
+</decoder>
+
+
+<!-- ========================================== -->
+<!-- YOUR ORIGINAL SYSTEM DECODERS (UNTOUCHED) -->
+<!-- ========================================== -->
+
 <decoder name="mikrotik">
   <prematch>^\w+ \d+ \d+:\d+:\d+ \S+ \w+,\w+,\w+ \S+|</prematch>
 </decoder>
@@ -10,44 +41,25 @@
   <order>srcuser, srcip, protocol</order>
 </decoder>
 
-<!-- OUT_CON FIELDS -->
-<decoder name="mikrotik-firewall">
-  <prematch>OUT_CONN</prematch>
-</decoder>
-
-<decoder name="mikrotik-firewall-fields">
-  <parent>mikrotik-firewall</parent>
-  <!-- Extracts the protocol (TCP or UDP) -->
-  <regex>proto (\w+)</regex>
-  <order>protocol</order>
-</decoder>
-
-<decoder name="mikrotik-firewall-fields">
-  <parent>mikrotik-firewall</parent>
-  <!-- Extracts Source IP and Destination IP -->
-  <regex>(\d+.\d+.\d+.\d+):\d+->(\d+.\d+.\d+.\d+):\d+</regex>
-  <order>srcip, dstip</order>
-</decoder>
-
-<!-- ALREADY ADDED -->
-<decoder name="mikrotik">
+<!-- ALREADY ADDED (RouterOS 7 Blocks) -->
+<decoder name="mikrotik-v7">
   <prematch>^RouterOS7.1-logs: </prematch>
 </decoder>
 
 <decoder name="mikrotik1">
-  <parent>mikrotik</parent>
+  <parent>mikrotik-v7</parent>
   <regex type="pcre2">\S+ (\w+ \d+ \d+:\d+:\d+) MikroTik user (\S+) (.*?) from (\d+.\d+.\d+.\d+) via (\w+)</regex>
   <order>logtimestamp, logged_user, action, ip_address, protocol</order>
 </decoder>
 
 <decoder name="mikrotik1">
-  <parent>mikrotik</parent>
+  <parent>mikrotik-v7</parent>
   <regex type="pcre2">\S+ (\w+ \d+ \d+:\d+:\d+) MikroTik dhcp-client on (\S+) (.*?) address (\d+.\d+.\d+.\d+)</regex>
   <order>logtimestamp, interface, action, ip_address</order>
 </decoder>
 
 <decoder name="mikrotik1">
-  <parent>mikrotik</parent>
+  <parent>mikrotik-v7</parent>
   <regex type="pcre2">\S+ (\w+ \d+ \d+:\d+:\d+) MikroTik router (\S+)</regex>
   <order>logtimestamp, action</order>
 </decoder>
