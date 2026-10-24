@@ -1,30 +1,43 @@
-<!-- /var/ossec/etc/rules/mikrotik_rules.xml -->
-<group name="mikrotik_group">
+<!-- /var/ossec/etc/rules/01_mikrotik_rules.xml -->
+<group name="mikrotik_group,">
 
   <!-- Temporary Broad Catch-All Rule for Testing -->
-  <!-- This hooks onto the native syslog engine to trap your MikroTik's IP safely -->
   <rule id="110099" level="3">
     <category>syslog</category>
     <match>10.0.0.1</match>
     <description>Raw MikroTik Syslog Stream (IP Match)</description>
   </rule>
 
-  <!-- Base Custom Decoder Rule -->
+  <!-- Base Custom Decoder Rule (For original system logs) -->
   <rule id="110000" level="0">
     <decoded_as>mikrotik</decoded_as>
     <description>MikroTik events grouped.</description>
   </rule>
 
 
-  <!-- Overwriting the rule to ignore your trusted scanner -->
-  <rule id="110053" level="15" overwrite="yes">
-    <decoded_as>mikrotik</decoded_as>
-    <match>internal_portscan</match>
-    <!-- If the log contains this IP, do not trip this rule -->
-    <regex type="pcre2">^(?!.*10\.0\.0\.20)</regex>
-    <description>MikroTik: CRITICAL ALERT - Internal Port Scan detected on LAN interface! Local host reconnaissance activity.</description>
+<!-- ======================================================== -->
+<!-- 0. Outbound Safe Traffic Whitelists                      -->
+<!-- ======================================================== -->
+  <!-- Exclude regular outbound HTTPS (443) from being flagged as a scan -->
+  <!-- FIXED: Uses strict text regex matching directly on the raw log string to bypass decoder order crashes -->
+  <rule id="110201" level="3">
+    <if_sid>110099</if_sid>
+    <regex>:\d+->\d+.\d+.\d+.\d+:443</regex>
+    <description>MikroTik: Regular Outbound HTTPS Traffic (Muted from Port Scan Group).</description>
+    <group>mikrotik_normal_traffic,firewall,</group>
   </rule>
 
+<!-- ======================================================== -->
+<!-- 3. Network Scans & Vulnerability Scanners (CRITICAL)     -->
+<!-- ======================================================== -->
+
+<!-- External WAN Port Scan Detection -->
+<!-- This will only fire now if the log doesn't match the 443 whitelist rule above -->
+<rule id="110050" level="13">
+  <if_sid>110000</if_sid>
+  <match>port_scanners</match>
+  <description>MikroTik: CRITICAL ALERT - Port Scan detected on interface</description>
+</rule>
 
   <!-- ======================================================== -->
   <!-- 1. Authentication & Session Monitoring (Critical)       -->
@@ -54,6 +67,7 @@
     <description>MikroTik: CRITICAL ALERT - User logged in from remote session.</description>
   </rule>
 
+
   <!-- ======================================================== -->
   <!-- 2. Perimeter Security & Firewall Events                  -->
   <!-- ======================================================== -->
@@ -76,21 +90,23 @@
     <description>MikroTik: CRITICAL ALERT - Traffic dropped on router interface input chain.</description>
   </rule>
 
+
   <!-- ======================================================== -->
   <!-- 3. Network Scans & Vulnerability Scanners (CRITICAL)     -->
   <!-- ======================================================== -->
 
   <!-- External WAN Port Scan Detection -->
-  <rule id="110050" level="15">
+  <rule id="110050" level="13">
     <if_sid>110000</if_sid>
     <match>port_scanners</match>
-    <description>MikroTik: CRITICAL ALERT - External Port Scan detected on WAN interface! Attacker IP blacklisted.</description>
+    <description>MikroTik: CRITICAL ALERT - Port Scan detected on interface</description>
   </rule>
 
   <!-- Internal LAN Port Scan Detection (Log Only) -->
   <rule id="110053" level="15">
     <if_sid>110000</if_sid>
     <match>internal_portscan</match>
+    <regex type="pcre2">^(?!.*10\.0\.0\.20)</regex>
     <description>MikroTik: CRITICAL ALERT - Internal Port Scan detected on LAN interface! Local host reconnaissance activity.</description>
   </rule>
 
@@ -114,6 +130,7 @@
     <match>dst-port=21|dst-port=23|dst-port=80|dst-port=445</match>
     <description>MikroTik: CRITICAL ALERT - Inbound traffic attempt detected on unencrypted/legacy management port.</description>
   </rule>
+
 
   <!-- ======================================================== -->
   <!-- 4. Core System & Configuration Alterations               -->
@@ -143,6 +160,7 @@
     <description>MikroTik: Network Interface physical interface link down.</description>
   </rule>
 
+
   <!-- ======================================================== -->
   <!-- 5. Tunnels & Remote Access VPN Monitoring                -->
   <!-- ======================================================== -->
@@ -158,6 +176,7 @@
     <match>vpn,info,error termination</match>
     <description>MikroTik: CRITICAL ALERT - VPN session disconnected or aborted due to error state.</description>
   </rule>
+
 
   <!-- ======================================================== -->
   <!-- 6. Internal Network Infrastructure & Services           -->
